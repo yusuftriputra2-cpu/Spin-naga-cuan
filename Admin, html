@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel - Dragon Game</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #090016, #18002e, #050008);
+    color: white;
+    min-height: 100vh;
+}
+
+.container {
+    width: 95%;
+    max-width: 700px;
+    margin: 40px auto;
+}
+
+.card {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 18px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 15px 40px rgba(0,0,0,.4);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+input, button {
+    width: 100%;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+input {
+    background: #fff;
+    color: #111;
+}
+
+button {
+    background: #7c3aed;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #9333ea;
+}
+
+.logout {
+    background: #dc2626;
+}
+
+.logout:hover {
+    background: #ef4444;
+}
+
+.hidden {
+    display: none;
+}
+
+.prize {
+    background: rgba(255,255,255,.07);
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 12px;
+}
+
+.prize-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.prize-row input {
+    margin: 0;
+}
+
+.delete {
+    width: auto;
+    background: #dc2626;
+    padding: 10px 15px;
+    margin: 0;
+}
+
+.status {
+    text-align: center;
+    margin-top: 15px;
+    color: #86efac;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- LOGIN -->
+    <div id="loginPage" class="card">
+        <h1>🔐 Admin Login</h1>
+
+        <input
+            type="text"
+            id="username"
+            placeholder="Username"
+        >
+
+        <input
+            type="password"
+            id="password"
+            placeholder="Password"
+        >
+
+        <button onclick="login()">LOGIN</button>
+
+        <p id="loginMessage" style="color:#fca5a5;text-align:center;"></p>
+    </div>
+
+
+    <!-- ADMIN PANEL -->
+    <div id="adminPage" class="hidden">
+
+        <div class="card">
+            <h1>🐉 Dragon Game Admin</h1>
+
+            <button class="logout" onclick="logout()">
+                LOGOUT
+            </button>
+        </div>
+
+
+        <div class="card">
+            <h2>⚙️ Pengaturan Game</h2>
+
+            <label>
+                Jumlah poin awal user
+            </label>
+
+            <input
+                type="number"
+                id="startingPoints"
+                min="0"
+            >
+
+            <label>
+                Poin per permainan
+            </label>
+
+            <input
+                type="number"
+                id="playCost"
+                min="0"
+            >
+
+            <button onclick="saveSettings()">
+                💾 SIMPAN PENGATURAN
+            </button>
+
+            <p id="settingsStatus" class="status"></p>
+        </div>
+
+
+        <div class="card">
+            <h2>🎁 Daftar Hadiah</h2>
+
+            <div id="prizeList"></div>
+
+            <button onclick="addPrize()">
+                ➕ TAMBAH HADIAH
+            </button>
+
+            <button onclick="savePrizes()">
+                💾 SIMPAN HADIAH
+            </button>
+
+            <p id="prizeStatus" class="status"></p>
+        </div>
+
+
+        <div class="card">
+            <h2>📊 Statistik Lokal</h2>
+
+            <p>
+                Total permainan:
+                <strong id="totalGames">0</strong>
+            </p>
+
+            <p>
+                Total kemenangan:
+                <strong id="totalWins">0</strong>
+            </p>
+
+            <button onclick="resetStats()">
+                ♻️ RESET STATISTIK
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "12345";
+
+
+// =========================
+// LOGIN
+// =========================
+
+function login() {
+
+    const username =
+        document.getElementById("username").value;
+
+    const password =
+        document.getElementById("password").value;
+
+    if (
+        username === ADMIN_USERNAME &&
+        password === ADMIN_PASSWORD
+    ) {
+
+        localStorage.setItem("dragonAdmin", "true");
+
+        showAdmin();
+
+    } else {
+
+        document.getElementById("loginMessage").textContent =
+            "Username atau password salah.";
+
+    }
+}
+
+
+function logout() {
+
+    localStorage.removeItem("dragonAdmin");
+
+    location.reload();
+}
+
+
+function showAdmin() {
+
+    document.getElementById("loginPage")
+        .classList.add("hidden");
+
+    document.getElementById("adminPage")
+        .classList.remove("hidden");
+
+    loadSettings();
+    loadPrizes();
+    loadStats();
+}
+
+
+// =========================
+// SETTINGS
+// =========================
+
+function loadSettings() {
+
+    const settings =
+        JSON.parse(localStorage.getItem("dragonSettings")) || {
+
+            startingPoints: 100,
+            playCost: 10
+
+        };
+
+    document.getElementById("startingPoints").value =
+        settings.startingPoints;
+
+    document.getElementById("playCost").value =
+        settings.playCost;
+}
+
+
+function saveSettings() {
+
+    const startingPoints =
+        Number(document.getElementById("startingPoints").value);
+
+    const playCost =
+        Number(document.getElementById("playCost").value);
+
+    if (startingPoints < 0 || playCost < 0) {
+        alert("Nilai tidak boleh negatif.");
+        return;
+    }
+
+    localStorage.setItem(
+        "dragonSettings",
+        JSON.stringify({
+            startingPoints,
+            playCost
+        })
+    );
+
+    document.getElementById("settingsStatus").textContent =
+        "Pengaturan berhasil disimpan.";
+}
+
+
+// =========================
+// PRIZES
+// =========================
+
+function defaultPrizes() {
+
+    return [
+
+        {
+            name: "🐉 Dragon Gold",
+            points: 100,
+            chance: 10
+        },
+
+        {
+            name: "🔥 Dragon Fire",
+            points: 50,
+            chance: 20
+        },
+
+        {
+            name: "💎 Crystal",
+            points: 25,
+            chance: 30
+        },
+
+        {
+            name: "⭐ Star",
+            points: 10,
+            chance: 40
+        }
+
+    ];
+}
+
+
+function loadPrizes() {
+
+    let prizes =
+        JSON.parse(localStorage.getItem("dragonPrizes"));
+
+    if (!prizes) {
+
+        prizes = defaultPrizes();
+
+        localStorage.setItem(
+            "dragonPrizes",
+            JSON.stringify(prizes)
+        );
+    }
+
+    renderPrizes(prizes);
+}
+
+
+function renderPrizes(prizes) {
+
+    const container =
+        document.getElementById("prizeList");
+
+    container.innerHTML = "";
+
+    prizes.forEach((prize, index) => {
+
+        const div =
+            document.createElement("div");
+
+        div.className = "prize";
+
+        div.innerHTML = `
+
+            <div class="prize-row">
+
+                <input
+                    type="text"
+                    value="${escapeHtml(prize.name)}"
+                    data-name="${index}"
+                    placeholder="Nama hadiah"
+                >
+
+                <input
+                    type="number"
+                    value="${prize.points}"
+                    data-points="${index}"
+                    min="0"
+                    placeholder="Poin"
+                >
+
+                <input
+                    type="number"
+                    value="${prize.chance}"
+                    data-chance="${index}"
+                    min="0"
+                    placeholder="Chance"
+                >
+
+                <button
+                    class="delete"
+                    onclick="deletePrize(${index})"
+                >
+                    X
+                </button>
+
+            </div>
+
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+
+function addPrize() {
+
+    let prizes =
+        JSON.parse(localStorage.getItem("dragonPrizes"))
+        || defaultPrizes();
+
+    prizes.push({
+
+        name: "🎁 Hadiah Baru",
+        points: 5,
+        chance: 10
+
+    });
+
+    renderPrizes(prizes);
+}
+
+
+function deletePrize(index) {
+
+    let prizes =
+        JSON.parse(localStorage.getItem("dragonPrizes"))
+        || defaultPrizes();
+
+    prizes.splice(index, 1);
+
+    renderPrizes(prizes);
+}
+
+
+function savePrizes() {
+
+    const rows =
+        document.querySelectorAll(".prize");
+
+    const prizes = [];
+
+    rows.forEach(row => {
+
+        const inputs =
+            row.querySelectorAll("input");
+
+        prizes.push({
+
+            name: inputs[0].value,
+
+            points:
+                Math.max(0, Number(inputs[1].value)),
+
+            chance:
+                Math.max(0, Number(inputs[2].value))
+
+        });
+
+    });
+
+    if (prizes.length === 0) {
+
+        alert("Minimal harus ada satu hadiah.");
+        return;
+
+    }
+
+    const totalChance =
+        prizes.reduce(
+            (sum, prize) => sum + prize.chance,
+            0
+        );
+
+    if (totalChance <= 0) {
+
+        alert("Total chance harus lebih dari 0.");
+        return;
+
+    }
+
+    localStorage.setItem(
+        "dragonPrizes",
+        JSON.stringify(prizes)
+    );
+
+    document.getElementById("prizeStatus").textContent =
+        "Hadiah berhasil disimpan.";
+}
+
+
+// =========================
+// STATISTICS
+// =========================
+
+function loadStats() {
+
+    const stats =
+        JSON.parse(localStorage.getItem("dragonStats"))
+        || {
+            games: 0,
+            wins: 0
+        };
+
+    document.getElementById("totalGames").textContent =
+        stats.games;
+
+    document.getElementById("totalWins").textContent =
+        stats.wins;
+}
+
+
+function resetStats() {
+
+    if (!confirm("Reset semua statistik?")) {
+        return;
+    }
+
+    localStorage.setItem(
+        "dragonStats",
+        JSON.stringify({
+            games: 0,
+            wins: 0
+        })
+    );
+
+    loadStats();
+}
+
+
+// =========================
+// SECURITY HELPER
+// =========================
+
+function escapeHtml(text) {
+
+    return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+
+// =========================
+// AUTO LOGIN
+// =========================
+
+if (
+    localStorage.getItem("dragonAdmin") === "true"
+) {
+    showAdmin();
+}
+
+</script>
+
+</body>
+</html>
